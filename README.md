@@ -10,6 +10,6 @@
 
 #  Установка
 ```bash
-git clone https://github.com/detomashi/weather-parser.git
+git clone https://github.com/deromashi/weather-parser.git
 cd weather-parser
 pip install -r requirements.txt
