@@ -13,3 +13,9 @@
 git clone https://github.com/deromashi/weather-parser.git
 cd weather-parser
 pip install -r requirements.txt
+```
+# Запуск
+```
+cd weather-parser
+python weather.py
+```
