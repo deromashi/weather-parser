@@ -1,22 +1,13 @@
 import requests
 import fake_useragent
 from bs4 import BeautifulSoup
-import random
 import csv
 import os
 import time
 
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-    'Accept-Encoding': 'gzip, deflate',
-    'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1',
-}
-
 
 session = requests.Session()
+
 def weather_now(url):
     weather = None
     while weather == None:
@@ -284,9 +275,11 @@ def update_world_urls():
         file_writer.writerow(['Страна', 'URL'])
         file_writer.writerows(worldwide)
 
+    os.makedirs('countries', exist_ok=True)
+
     with open('worldwide.csv', mode='r', encoding='utf-8') as csvfile:
         file_reader = csv.reader(csvfile)
-        countries = list(file_reader)[168:169] #[1:]
+        countries = list(file_reader)[1:] #[1:]
         for country in countries:
             country_name = country[0].strip()
             print('-' * 10 + country_name + '-' * 10)
@@ -298,12 +291,12 @@ def update_world_urls():
 def get_urls(url):
     catalog = None
     attempt = 1
+    headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36'}
     while catalog == None and attempt <= 5:
         if attempt > 1:
             time.sleep(0.5)
             headers = {'user-agent': fake_useragent.UserAgent().random}
             print('-')
-        headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36'}
         response = session.get(url, headers=headers)
         soup = BeautifulSoup(response.text, 'lxml')
         catalog = soup.find_all('section', class_='catalog-body')
@@ -332,13 +325,10 @@ def connect_world_urls():
                     spisok = list(file_reader)[1:]
                 file_writer.writerows(spisok)
 
-def show():
+def start():
     with open('countries/World.csv', mode='r', encoding='utf-8') as csvfile:
 
-        # Introduce
-        print('Приветствую Вас в моем мини-приложении')
-        print('Для выхода - при выборе города введите 0')
-
+        print('Для выхода в меню - при выборе города введите 0')
         url = 'https://www.gismeteo.ru'
         file_reader = csv.reader(csvfile)
         folder_dict = {}
@@ -362,55 +352,107 @@ def show():
 
         while True:
             name = input('Введите город: ').lower()
+            flag = False
 
             if name == '0':
                 break
             elif name not in folder_dict:
-                print('Неверно написан город')
+                print('Города нет в списке')
                 continue
             elif len(folder_dict[name]) == 1:
                 sub_url = list(folder_dict[name][0].values())[0]
-                # print(sub_url)
-                # print(*weather_now(url + sub_url+'now', headers), sep='')
             else:
                 choose = {}
+                print()
+                print('Выберете расположение населённого пункта')
                 for i in range(len(folder_dict[name])):
                     choose[i] = list(folder_dict[name][i].values())[0]
                     print(f'{i+1} - {list(folder_dict[name][i].keys())[0]}')
+                print('0 - Отмена')
                 print()
                 while True:
                     try:
-                        n = int(input('Выберете нужный: ').strip())-1
+                        n = int(input('Мой выбор: ').strip())-1
                     except ValueError:
                         print('Ты совершил большую ошибку')
                         continue
                     if 0 <= n < len(choose):
-                        # print(choose[n])
                         sub_url = choose[n]
-                        # print(*weather_now(url + choose[n] + 'now', headers), sep ='')
+                        break
+                    elif n== -1:
+                        print()
+                        flag = True
                         break
                     else:
                         print('Неверный выбор, дружок')
+            if flag:
+                continue
             print()
             print('Выберете интересующее вас время')
             urls = {1: 'now/', 2: '', 3: 'tomorrow/', 4: '3-days/', 5: 'weekend/', 6: '10-days/', 7: '2-weeks/', 8: 'month/'}
             names = {1: 'Сейчас', 2: 'Сегодня', 3: 'Завтра', 4: '3 дня', 5: "Выходные", 6: "10 дней", 7: "2 недели", 8: "Месяц"}
-            for i in range(1, len(names)+1):
+            for i in range(1, len(names)):
                 print(f'{i} - {names[i]}')
+            print('0 - Отмена')
             while True:
                 try:
-                    n = int(input('Выберете нужный: ').strip())
+                    n = int(input('Мой выбор: ').strip())
                 except ValueError:
                     print('Ты совершил большую ошибку')
                     continue
                 if 1 <= n <= len(names):
-                    # print(choose[n])
                     sub_url = sub_url + urls[n]
-                    # print(*weather_now(url + choose[n] + 'now', headers), sep ='')
+                    break
+                elif n==0:
+                    print()
+                    flag = True
                     break
                 else:
                     print('Неверный выбор, дружок')
-            weather(url + sub_url)
-            print('\n')
+            if flag:
+                continue
+            try:
+                print()
+                weather(url + sub_url)
+            except Exception as e:
+                if 'HTTPSConnectionPool' in str(e):
+                    print('\033[31mНе удалось подключиться к серверу\033[0m')
+                else:
+                    print('Неизвестная ошибка')
+            print()
 
-show()
+def run():
+    print('\033[35m     Меню\033[0m')
+
+    menu = {1: start, 2: update_world_urls, 3: 'exit'}
+    visible_menu = {1: '\033[3;32mСтарт\033[0m', 2: 'Обновить ссылки', 3: '\033[31mВыход\033[0m'}
+
+    for i in visible_menu:
+        print(f'{i} - {visible_menu[i]}')
+    while True:
+        try:
+            n = int(input('Мой выбор: ').strip())
+        except ValueError:
+            print('А по-нормальному?')
+            continue
+        if 1<= n <= len(visible_menu):
+            if n == 3:
+                return 0
+            print()
+            try:
+                menu[n]()
+            except Exception as e:
+                if 'HTTPSConnectionPool' in str(e):
+                    print('\033[31mНе удалось подключиться к серверу\033[0m')
+                else:
+                    print(f'Неизвестная ошибка: {e}')
+            print('\n')
+            run()
+            break
+        else:
+            print('Такой циферки тут нет')
+
+if __name__ == '__main__':
+    print('Приветствую Вас в моем мини-приложении - парсере погоды на Gismeteo\n')
+    run()
+    print('\033[1;3;31mПрограмма завершена\033[0m')
